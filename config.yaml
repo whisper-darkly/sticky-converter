@@ -1,0 +1,61 @@
+# sticky-refinery configuration
+
+# HTTP listen address
+listen_addr: ":8080"
+
+# SQLite database path (shared with overseer)
+db_path: "sticky-refinery.db"
+
+# Comma-separated trusted CIDRs for the /ws WebSocket endpoint.
+# Leave empty to auto-detect local subnets.
+trusted_cidrs: ""
+
+# Worker pool settings
+pool:
+  # Maximum concurrent conversions
+  size: 4
+
+  # How long to wait before killing excess workers after a PATCH /pool resize
+  shrink_grace: "1m"
+
+  # Which workers to kill first when shrinking: "oldest" or "youngest"
+  shrink_kill_order: "oldest"
+
+# How often to scan for new files
+scan_interval: "30s"
+
+# Conversion pipelines
+pipelines:
+  - name: "ts-to-mp4"
+
+    # Lower number = higher priority
+    priority: 1
+
+    # Glob patterns (doublestar ** supported)
+    paths:
+      - "/recordings/**/*.ts"
+
+    # Which files to process first: "oldest" or "newest"
+    direction: oldest
+
+    # Minimum file age before conversion (prevents converting in-progress recordings)
+    min_age: "5m"
+
+    # Maximum file age; null = no limit
+    max_age: null
+
+    # Output path derivation
+    target:
+      # Optional named capture groups from the input filename
+      regex: "^(?P<base>.+)\\.ts$"
+      # Template: {{.File.Dir}}, {{.File.Name}}, {{.File.Basename}}, {{.File.Ext}}
+      # Also: any named capture groups from regex (e.g. {{.base}})
+      format: "{{.File.Dir}}/{{.File.Basename}}.mp4"
+
+    # Conversion command template.
+    # Variables: {{.Input}}, {{.Output}}, {{.Extra}}, {{.File.Dir/Name/Basename/Ext}}
+    command: "ffmpeg -y -i {{.Input}} -map 0:v:0 -map 0:a? -c:v libx264 -pix_fmt yuv420p -c:a copy -movflags +faststart {{.Output}}"
+
+    # Extra key-value pairs passed as {{.Extra}} (JSON-encoded).
+    # API PATCH /pipelines/ts-to-mp4 merges additional values that override these.
+    extra: {}
