@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// schema adds sticky-refinery's own tables to the DB.
-// The overseer schema (tasks table) is already applied by overseer.OpenDB().
+// schema defines the sticky-refinery database tables.
 const schema = `
 CREATE TABLE IF NOT EXISTS target_files (
 	path              TEXT PRIMARY KEY,
@@ -33,7 +32,6 @@ type Store struct {
 }
 
 // New applies the sticky-refinery schema to db and returns a Store.
-// db must already have the overseer schema applied.
 func New(db *sql.DB) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)

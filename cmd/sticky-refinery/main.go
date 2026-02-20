@@ -13,7 +13,8 @@ import (
 	"github.com/whisper-darkly/sticky-refinery/internal/api"
 	"github.com/whisper-darkly/sticky-refinery/internal/config"
 	"github.com/whisper-darkly/sticky-refinery/internal/daemon"
-	"github.com/whisper-darkly/sticky-refinery/internal/overseer"
+	"github.com/whisper-darkly/sticky-refinery/internal/db"
+	"github.com/whisper-darkly/sticky-refinery/internal/hub"
 	"github.com/whisper-darkly/sticky-refinery/internal/pool"
 	"github.com/whisper-darkly/sticky-refinery/internal/store"
 )
@@ -33,35 +34,30 @@ func main() {
 	log.Printf("sticky-refinery starting: pool_size=%d scan_interval=%s pipelines=%d",
 		cfg.Pool.Size, cfg.ScanInterval, len(cfg.Pipelines))
 
-	// Bootstrap overseer (stub for now).
-	ov := overseer.StubProvider()
-
-	db, err := ov.OpenDB(cfg.DBPath)
+	database, err := db.Open(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
 
-	st, err := store.New(db)
+	st, err := store.New(database)
 	if err != nil {
 		log.Fatalf("init store: %v", err)
 	}
 
-	hub := ov.NewHub(overseer.HubConfig{DB: db})
-
-	var trustedNets = ov.DetectLocalSubnets()
+	trustedNets := hub.DetectLocalSubnets()
 	if cfg.TrustedCIDRs != "" {
-		nets, err := ov.ParseTrustedCIDRs(cfg.TrustedCIDRs)
+		nets, err := hub.ParseTrustedCIDRs(cfg.TrustedCIDRs)
 		if err != nil {
 			log.Fatalf("parse trusted_cidrs: %v", err)
 		}
 		trustedNets = nets
 	}
-	wsHandler := ov.NewHandler(hub, trustedNets)
+	h := hub.New(trustedNets)
 
 	p := pool.New(cfg.Pool, st, cfg.Pipelines, daemon.OnComplete(st))
 	d := daemon.New(cfg, st, p)
 
-	srv := api.New(cfg, *cfgPath, st, p, hub, wsHandler)
+	srv := api.New(cfg, *cfgPath, st, p, h)
 	httpServer := &http.Server{
 		Addr:    cfg.ListenAddr,
 		Handler: srv.Router(),
@@ -76,7 +72,6 @@ func main() {
 		}
 	}()
 
-	// Wait for signal.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
