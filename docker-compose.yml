@@ -1,0 +1,29 @@
+services:
+  sticky-refinery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: sticky-refinery:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount your config; copy config.example.yaml → config.yaml to get started
+      - ./config.yaml:/data/config.yaml:ro
+      # Persistent DB and output data
+      - sticky-data:/data
+    environment:
+      # These override the corresponding YAML fields (useful for secrets / deployment)
+      - REFINERY_LISTEN=:8080
+      - REFINERY_DB=/data/sticky-refinery.db
+      # Allow WebSocket from any origin — set to a specific CIDR in production
+      - REFINERY_TRUSTED_CIDRS=0.0.0.0/0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  sticky-data:

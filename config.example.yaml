@@ -1,0 +1,24 @@
+pool:
+  size: 4
+  shrink_grace: 1m
+  shrink_kill_order: oldest
+
+scan_interval: 30s
+db_path: /data/sticky-refinery.db
+listen_addr: :8080
+
+# Set to 0.0.0.0/0 to allow WebSocket connections from any host (dev only).
+# Leave empty to auto-detect local subnets.
+trusted_cidrs: ""
+
+pipelines:
+  - name: example-mp4-to-mkv
+    priority: 0
+    paths:
+      - /data/input/**/*.mp4
+    direction: oldest
+    min_age: 5s
+    target:
+      regex: '(?P<base>.+)\.mp4$'
+      format: "{{.base}}.mkv"
+    command: 'ffmpeg -i {{.Input}} -c copy {{.Output}}'
