@@ -77,7 +77,8 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Load reads and parses the YAML config at path.
+// Load reads and parses the YAML config at path, then applies any
+// REFINERY_* environment variable overrides.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -87,7 +88,21 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
+	applyEnv(&cfg)
 	return &cfg, nil
+}
+
+// applyEnv overrides config fields with values from REFINERY_* env vars.
+func applyEnv(cfg *Config) {
+	if v := os.Getenv("REFINERY_LISTEN"); v != "" {
+		cfg.ListenAddr = v
+	}
+	if v := os.Getenv("REFINERY_DB"); v != "" {
+		cfg.DBPath = v
+	}
+	if v := os.Getenv("REFINERY_TRUSTED_CIDRS"); v != "" {
+		cfg.TrustedCIDRs = v
+	}
 }
 
 // Validate returns an error if the config is invalid.

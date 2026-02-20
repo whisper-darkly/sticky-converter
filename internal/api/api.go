@@ -8,30 +8,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/whisper-darkly/sticky-refinery/internal/config"
-	"github.com/whisper-darkly/sticky-refinery/internal/overseer"
+	"github.com/whisper-darkly/sticky-refinery/internal/hub"
 	"github.com/whisper-darkly/sticky-refinery/internal/pool"
 	"github.com/whisper-darkly/sticky-refinery/internal/store"
+	"github.com/whisper-darkly/sticky-refinery/internal/ui"
 )
 
 // Server holds the API dependencies.
 type Server struct {
-	cfg        *config.Config
-	cfgPath    string
-	store      *store.Store
-	pool       *pool.Pool
-	hub        *overseer.Hub
-	wsHandler  http.HandlerFunc
+	cfg     *config.Config
+	cfgPath string
+	store   *store.Store
+	pool    *pool.Pool
+	hub     *hub.Hub
 }
 
 // New creates a Server.
-func New(cfg *config.Config, cfgPath string, st *store.Store, p *pool.Pool, hub *overseer.Hub, wsHandler http.HandlerFunc) *Server {
+func New(cfg *config.Config, cfgPath string, st *store.Store, p *pool.Pool, h *hub.Hub) *Server {
 	return &Server{
-		cfg:       cfg,
-		cfgPath:   cfgPath,
-		store:     st,
-		pool:      p,
-		hub:       hub,
-		wsHandler: wsHandler,
+		cfg:     cfg,
+		cfgPath: cfgPath,
+		store:   st,
+		pool:    p,
+		hub:     h,
 	}
 }
 
@@ -40,6 +39,13 @@ func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	// API console UI
+	uiHandler := ui.Handler()
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/ui", http.StatusFound)
+	})
+	r.Get("/ui", uiHandler.ServeHTTP)
 
 	r.Get("/health", s.handleHealth)
 	r.Get("/config", s.handleGetConfig)
@@ -54,8 +60,8 @@ func (s *Server) Router() http.Handler {
 	r.Post("/tasks/{id}/pause", s.handlePauseTask)
 	r.Post("/tasks/{id}/resume", s.handleResumeTask)
 
-	if s.wsHandler != nil {
-		r.Get("/ws", s.wsHandler)
+	if s.hub != nil {
+		r.Get("/ws", s.hub.ServeWS)
 	}
 
 	return r
@@ -76,15 +82,15 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetPool(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
-		"size":        s.pool.Size(),
-		"active":      s.pool.ActiveCount(),
-		"workers":     s.pool.Workers(),
+		"size":    s.pool.Size(),
+		"active":  s.pool.ActiveCount(),
+		"workers": s.pool.Workers(),
 	})
 }
 
 type patchPoolRequest struct {
-	Size           *int    `json:"size"`
-	ShrinkGrace    *string `json:"shrink_grace"`
+	Size            *int    `json:"size"`
+	ShrinkGrace     *string `json:"shrink_grace"`
 	ShrinkKillOrder *string `json:"shrink_kill_order"`
 }
 
@@ -115,7 +121,6 @@ func (s *Server) handlePatchPool(w http.ResponseWriter, r *http.Request) {
 
 	s.pool.Resize(size, grace.Duration, killOrder)
 
-	// Persist to pipeline_config table under "__pool__"
 	b, _ := json.Marshal(req)
 	_ = s.store.SetPipelineExtra("__pool__", string(b))
 
@@ -237,7 +242,6 @@ func (s *Server) handlePauseTask(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// Stop if running (best effort)
 	_ = s.pool.StopWorker(id)
 	if err := s.store.MarkPaused(path); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
