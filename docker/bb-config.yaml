@@ -1,0 +1,8 @@
+listen_addr: ":9090"
+backends:
+  - name: sticky-refinery
+    openapi_url: http://sticky-refinery:8080/openapi.json
+    websocket:
+      url: ws://sticky-refinery:8080/ws
+      label: "Refinery"
+      send: true
