@@ -97,6 +97,18 @@ func (s *Store) MarkErrored(path, message string) error {
 	return err
 }
 
+// IsCompleted returns true if the file at path has status 'completed'.
+func (s *Store) IsCompleted(path string) bool {
+	tf, err := s.GetByPath(path)
+	return err == nil && tf.Status == "completed"
+}
+
+// IsInFlight returns true if the file at path has status 'in_flight'.
+func (s *Store) IsInFlight(path string) bool {
+	tf, err := s.GetByPath(path)
+	return err == nil && tf.Status == "in_flight"
+}
+
 // MarkPaused sets status to paused.
 func (s *Store) MarkPaused(path string) error {
 	_, err := s.db.Exec(`UPDATE target_files SET status = 'paused' WHERE path = ?`, path)

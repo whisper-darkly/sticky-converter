@@ -8,52 +8,22 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/whisper-darkly/sticky-refinery/internal/config"
 )
 
-// CandidateFile is a file that passed all filters for a pipeline.
-type CandidateFile struct {
-	Path         string
-	PipelineName string
-	Priority     int
-	ModTime      time.Time
-	Direction    string // "oldest" or "newest"
+type fileEntry struct {
+	path    string
+	modTime time.Time
 }
 
-// ScanAll walks all pipeline paths, applies min/max age filters, and returns
-// a deduplicated, priority-sorted list of candidates.
-func ScanAll(pipelines []config.PipelineConfig) ([]*CandidateFile, error) {
+// ScanAll walks all glob patterns, applies min/max age filters, and returns
+// matched file paths sorted by direction ("oldest" first or "newest" first).
+// Zero-value minAge or maxAge means no limit.
+func ScanAll(patterns []string, direction string, minAge, maxAge time.Duration) ([]string, error) {
 	now := time.Now()
 	seen := make(map[string]bool)
-	var candidates []*CandidateFile
+	var entries []fileEntry
 
-	for _, p := range pipelines {
-		found, err := scanPipeline(p, now, seen)
-		if err != nil {
-			return nil, err
-		}
-		candidates = append(candidates, found...)
-	}
-
-	// Sort: lower priority number first; within same priority by modtime
-	sort.SliceStable(candidates, func(i, j int) bool {
-		if candidates[i].Priority != candidates[j].Priority {
-			return candidates[i].Priority < candidates[j].Priority
-		}
-		if candidates[i].Direction == "oldest" {
-			return candidates[i].ModTime.Before(candidates[j].ModTime)
-		}
-		return candidates[i].ModTime.After(candidates[j].ModTime)
-	})
-
-	return candidates, nil
-}
-
-func scanPipeline(p config.PipelineConfig, now time.Time, seen map[string]bool) ([]*CandidateFile, error) {
-	var out []*CandidateFile
-
-	for _, pattern := range p.Paths {
-		// doublestar requires a base path and a relative pattern
+	for _, pattern := range patterns {
 		base, rel := splitPattern(pattern)
 		fsys := os.DirFS(base)
 
@@ -72,36 +42,40 @@ func scanPipeline(p config.PipelineConfig, now time.Time, seen map[string]bool) 
 			}
 			age := now.Sub(info.ModTime())
 
-			if p.MinAge != nil && age < p.MinAge.Duration {
+			if minAge > 0 && age < minAge {
 				return nil
 			}
-			if p.MaxAge != nil && age > p.MaxAge.Duration {
+			if maxAge > 0 && age > maxAge {
 				return nil
 			}
 
 			seen[absPath] = true
-			out = append(out, &CandidateFile{
-				Path:         absPath,
-				PipelineName: p.Name,
-				Priority:     p.Priority,
-				ModTime:      info.ModTime(),
-				Direction:    p.Direction,
-			})
+			entries = append(entries, fileEntry{path: absPath, modTime: info.ModTime()})
 			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
-	return out, nil
+
+	sort.SliceStable(entries, func(i, j int) bool {
+		if direction == "newest" {
+			return entries[i].modTime.After(entries[j].modTime)
+		}
+		return entries[i].modTime.Before(entries[j].modTime)
+	})
+
+	paths := make([]string, len(entries))
+	for i, e := range entries {
+		paths[i] = e.path
+	}
+	return paths, nil
 }
 
 // splitPattern separates an absolute glob pattern like /recordings/**/*.ts into
 // a filesystem base (/recordings) and a doublestar pattern (**/*.ts).
-// It walks forward until it hits a glob metacharacter.
 func splitPattern(pattern string) (base, rel string) {
 	dir := filepath.Dir(pattern)
-	// Walk up until no glob chars in the directory portion
 	for dir != "/" && dir != "." && containsGlob(dir) {
 		dir = filepath.Dir(dir)
 	}

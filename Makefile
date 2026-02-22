@@ -1,26 +1,20 @@
-.PHONY: build run test lint tidy install docker
-
-BINARY := sticky-refinery
+BINARY  := sticky-refinery
 CMD     := ./cmd/sticky-refinery
+VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)"
 PREFIX  ?= /usr/local
 
+.PHONY: build install clean test
+
 build:
-	CGO_ENABLED=0 go build -o $(BINARY) $(CMD)
+	go build $(LDFLAGS) -o dist/$(BINARY) $(CMD)
 
 install:
-	CGO_ENABLED=0 go build -o $(PREFIX)/bin/$(BINARY) $(CMD)
+	go build $(LDFLAGS) -o $(PREFIX)/bin/$(BINARY) $(CMD)
 
-docker:
-	$(MAKE) -C docker build
-
-run: build
-	./$(BINARY) -config config.yaml
+clean:
+	rm -rf dist/
 
 test:
-	go test ./...
-
-lint:
-	golangci-lint run ./...
-
-tidy:
-	go mod tidy
+	go test -race ./...
