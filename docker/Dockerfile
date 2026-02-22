@@ -6,9 +6,7 @@ WORKDIR /src/sticky-refinery
 COPY . ./
 RUN make install PREFIX=/out
 
-FROM alpine:3.21
-
-RUN apk add --no-cache ffmpeg
+FROM lscr.io/linuxserver/ffmpeg:latest
 
 COPY --from=builder /out/bin/sticky-refinery /usr/local/bin/sticky-refinery
 
@@ -17,4 +15,6 @@ ENV OVERSEER_DB=/data/refinery.db
 
 EXPOSE 8080
 
-CMD ["sticky-refinery", "-config", "/data/config.yaml"]
+# Override linuxserver's default ffmpeg entrypoint
+ENTRYPOINT ["/usr/local/bin/sticky-refinery"]
+CMD ["-config", "/data/config.yaml"]

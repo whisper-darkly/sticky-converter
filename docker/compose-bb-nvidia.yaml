@@ -1,0 +1,53 @@
+# docker/compose-bb-nvidia.yaml
+# sticky-refinery (NVIDIA NVENC) + sticky-bb playground
+#
+# Requires NVIDIA Container Toolkit on the host:
+#   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+#
+# sticky-bb serves the UI at http://localhost:9090
+# sticky-refinery listens at http://localhost:8080
+#
+# Start with:
+#   docker compose -f docker/compose-bb-nvidia.yaml up
+#
+# Then open http://localhost:9090 in your browser.
+# Use NVENC encoders in your config, e.g.: -c:v h264_nvenc
+
+services:
+  sticky-refinery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../config.example.yaml:/data/config.yaml:ro
+      - refinery-data:/data
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/openapi.json"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  bb:
+    image: ghcr.io/whisper-darkly/sticky-bb:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./bb-config.yaml:/config/config.yaml:ro
+    depends_on:
+      sticky-refinery:
+        condition: service_healthy
+
+volumes:
+  refinery-data:

@@ -46,4 +46,5 @@ clean: ## Remove sticky-refinery images and dist/
 	-docker images --format '{{.Repository}}:{{.Tag}}' | grep '^sticky-refinery' | xargs -r docker rmi 2>/dev/null || true
 	-rm -rf $(DIST_DIR)
 
+
 .DEFAULT_GOAL := help
