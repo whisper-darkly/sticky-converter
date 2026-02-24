@@ -1,7 +1,7 @@
-# sticky-refinery — sticky-overseer config format
-name: "sticky-refinery"
+# sticky-converter — sticky-overseer config format
+name: "sticky-converter"
 listen: ":8080"
-db: sticky-refinery.db
+db: sticky-converter.db
 trusted_cidrs: []
 
 # Global pool defaults (overridden per-action)
@@ -26,7 +26,7 @@ actions:
       direction: "oldest"
       min_age: "5m"
       delete_on_success: true
-      db_path: "sticky-refinery.db"
+      db_path: "sticky-converter.db"
       target:
         regex: "^(?P<base>.+)\\.ts$"
         format: "{{.File.Dir}}/{{.File.Basename}}.mp4"

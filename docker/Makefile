@@ -2,7 +2,7 @@
 # Or from within this directory: make [target]
 # Build context is always the repository root.
 
-IMAGE_NAME := sticky-refinery
+IMAGE_NAME := sticky-converter
 REPO_ROOT  := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 VERSION    ?= $(shell cat $(REPO_ROOT)/VERSION)
 DIST_DIR   := dist
@@ -21,7 +21,7 @@ help: ## Show this help message
 version: ## Show current version
 	@echo $(VERSION)
 
-build: ## Build the sticky-refinery image
+build: ## Build the sticky-converter image
 	docker build \
 		-f $(CURDIR)/Dockerfile \
 		-t $(IMAGE_NAME):$(VERSION) \
@@ -34,16 +34,16 @@ export: build ## Build and export image to docker/dist/
 	docker save $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest | gzip > $(DIST_DIR)/$(IMAGE_NAME)-$(VERSION).tar.gz
 	@echo "Exported $(DIST_DIR)/$(IMAGE_NAME)-$(VERSION).tar.gz  ($$(du -h $(DIST_DIR)/$(IMAGE_NAME)-$(VERSION).tar.gz | cut -f1))"
 
-load: ## Load a previously exported tar. Usage: make load FILE=dist/sticky-refinery-*.tar
+load: ## Load a previously exported tar. Usage: make load FILE=dist/sticky-converter-*.tar
 	@if [ -z "$(FILE)" ]; then \
-		echo "Error: FILE is required. Usage: make load FILE=dist/sticky-refinery-*.tar"; \
+		echo "Error: FILE is required. Usage: make load FILE=dist/sticky-converter-*.tar"; \
 		exit 1; \
 	fi
 	docker load -i $(FILE)
 	@echo "Image loaded from $(FILE)"
 
-clean: ## Remove sticky-refinery images and dist/
-	-docker images --format '{{.Repository}}:{{.Tag}}' | grep '^sticky-refinery' | xargs -r docker rmi 2>/dev/null || true
+clean: ## Remove sticky-converter images and dist/
+	-docker images --format '{{.Repository}}:{{.Tag}}' | grep '^sticky-converter' | xargs -r docker rmi 2>/dev/null || true
 	-rm -rf $(DIST_DIR)
 
 

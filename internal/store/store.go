@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// schema defines the sticky-refinery database tables.
+// schema defines the sticky-converter database tables.
 const schema = `
 CREATE TABLE IF NOT EXISTS target_files (
 	path              TEXT PRIMARY KEY,
@@ -26,12 +26,12 @@ CREATE TABLE IF NOT EXISTS pipeline_config (
 );
 `
 
-// Store is the sticky-refinery data access layer.
+// Store is the sticky-converter data access layer.
 type Store struct {
 	db *sql.DB
 }
 
-// New applies the sticky-refinery schema to db and returns a Store.
+// New applies the sticky-converter schema to db and returns a Store.
 func New(db *sql.DB) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("apply schema: %w", err)

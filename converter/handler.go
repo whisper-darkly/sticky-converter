@@ -11,10 +11,10 @@ import (
 	"time"
 
 	overseer "github.com/whisper-darkly/sticky-overseer/v2"
-	"github.com/whisper-darkly/sticky-refinery/internal/db"
-	"github.com/whisper-darkly/sticky-refinery/internal/executor"
-	"github.com/whisper-darkly/sticky-refinery/internal/scanner"
-	"github.com/whisper-darkly/sticky-refinery/internal/store"
+	"github.com/whisper-darkly/sticky-converter/internal/db"
+	"github.com/whisper-darkly/sticky-converter/internal/executor"
+	"github.com/whisper-darkly/sticky-converter/internal/scanner"
+	"github.com/whisper-darkly/sticky-converter/internal/store"
 )
 
 // duration is a time.Duration that JSON-unmarshals from strings like "30s".
@@ -219,7 +219,7 @@ func (f *converterFactory) Create(config map[string]any, actionName string, merg
 
 	dbPath := cfg.DBPath
 	if dbPath == "" {
-		dbPath = "sticky-refinery.db"
+		dbPath = "sticky-converter.db"
 	}
 
 	database, err := db.Open(dbPath)

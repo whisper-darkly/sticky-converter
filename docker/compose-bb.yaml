@@ -1,8 +1,8 @@
 # docker/compose-bb.yaml
-# sticky-refinery + sticky-bb playground
+# sticky-converter + sticky-bb playground
 #
 # sticky-bb serves the UI at http://localhost:9090
-# sticky-refinery listens at http://localhost:8080
+# sticky-converter listens at http://localhost:8080
 #
 # Inspect the protocol manifest:
 #   curl http://localhost:8080/openapi.json | jq .
@@ -13,7 +13,7 @@
 # Then open http://localhost:9090 in your browser.
 
 services:
-  sticky-refinery:
+  sticky-converter:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -21,7 +21,7 @@ services:
       - "8080:8080"
     volumes:
       - ../config.example.yaml:/data/config.yaml:ro
-      - refinery-data:/data
+      - converter-data:/data
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/openapi.json"]
       interval: 5s
@@ -35,8 +35,8 @@ services:
     volumes:
       - ./bb-config.yaml:/config/config.yaml:ro
     depends_on:
-      sticky-refinery:
+      sticky-converter:
         condition: service_healthy
 
 volumes:
-  refinery-data:
+  converter-data:

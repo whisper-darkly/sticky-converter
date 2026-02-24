@@ -1,4 +1,4 @@
-module github.com/whisper-darkly/sticky-refinery
+module github.com/whisper-darkly/sticky-converter
 
 go 1.24.0
 

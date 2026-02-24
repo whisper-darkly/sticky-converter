@@ -1,11 +1,11 @@
 # docker/compose-bb-nvidia.yaml
-# sticky-refinery (NVIDIA NVENC) + sticky-bb playground
+# sticky-converter (NVIDIA NVENC) + sticky-bb playground
 #
 # Requires NVIDIA Container Toolkit on the host:
 #   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 #
 # sticky-bb serves the UI at http://localhost:9090
-# sticky-refinery listens at http://localhost:8080
+# sticky-converter listens at http://localhost:8080
 #
 # Start with:
 #   docker compose -f docker/compose-bb-nvidia.yaml up
@@ -14,7 +14,7 @@
 # Use NVENC encoders in your config, e.g.: -c:v h264_nvenc
 
 services:
-  sticky-refinery:
+  sticky-converter:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -22,7 +22,7 @@ services:
       - "8080:8080"
     volumes:
       - ../config.example.yaml:/data/config.yaml:ro
-      - refinery-data:/data
+      - converter-data:/data
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
@@ -46,8 +46,8 @@ services:
     volumes:
       - ./bb-config.yaml:/config/config.yaml:ro
     depends_on:
-      sticky-refinery:
+      sticky-converter:
         condition: service_healthy
 
 volumes:
-  refinery-data:
+  converter-data:

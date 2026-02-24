@@ -1,5 +1,5 @@
-BINARY  := sticky-refinery
-CMD     := ./cmd/sticky-refinery
+BINARY  := sticky-converter
+CMD     := ./cmd/sticky-converter
 VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)"

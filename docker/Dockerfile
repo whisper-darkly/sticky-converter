@@ -6,22 +6,22 @@ RUN apk add --no-cache make git
 
 # Clone overseer so the replace directive in go.mod resolves:
 #   replace github.com/whisper-darkly/sticky-overseer/v2 => ../sticky-overseer
-#   /src/sticky-refinery/../sticky-overseer = /src/sticky-overseer ✓
+#   /src/sticky-converter/../sticky-overseer = /src/sticky-overseer ✓
 RUN git clone --depth=1 --branch=${OVERSEER_VERSION} \
     https://github.com/whisper-darkly/sticky-overseer.git \
     /src/sticky-overseer
 
-WORKDIR /src/sticky-refinery
+WORKDIR /src/sticky-converter
 COPY . ./
 RUN make install PREFIX=/out
 
 
 FROM lscr.io/linuxserver/ffmpeg:latest
 
-COPY --from=builder /out/bin/sticky-refinery /usr/local/bin/sticky-refinery
+COPY --from=builder /out/bin/sticky-converter /usr/local/bin/sticky-converter
 
 ENV OVERSEER_LISTEN=:8080
-ENV OVERSEER_DB=/data/refinery.db
+ENV OVERSEER_DB=/data/converter.db
 
 EXPOSE 8080
 
@@ -29,5 +29,5 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://localhost:8080/openapi.json > /dev/null || exit 1
 
 # Override linuxserver's default ffmpeg entrypoint
-ENTRYPOINT ["/usr/local/bin/sticky-refinery"]
+ENTRYPOINT ["/usr/local/bin/sticky-converter"]
 CMD ["-config", "/data/config.yaml"]
